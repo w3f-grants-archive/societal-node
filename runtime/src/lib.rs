@@ -1580,11 +1580,10 @@ impl pallet_dao::Config for Runtime {
 	type DaoMaxCouncilMembers = DaoMaxCouncilMembers;
 	type DaoMaxTechnicalCommitteeMembers = DaoMaxTechnicalCommitteeMembers;
 	type DaoTokenMinBalanceLimit = DaoTokenMinBalanceLimit;
-	type DaoTokenVotingMinThreshold = DaoTokenVotingMinThreshold;
 	type AssetId = u32;
 	type Balance = Balance;
 	type CouncilProvider = DaoCouncilMembers;
-	type CouncilApproveProvider = ();
+	type CouncilApproveProvider = DaoEthGovernance;
 	type TechnicalCommitteeProvider = DaoTechnicalCommitteeMembers;
 	type ApproveTreasuryPropose = DaoTreasury;
 	type AssetProvider = Assets;
@@ -1593,6 +1592,22 @@ impl pallet_dao::Config for Runtime {
 		EnsureDao<AccountId>,
 		pallet_dao_collective::EnsureDaoOriginWithArg<AccountId, DaoCouncilCollective>,
 	>;
+}
+
+parameter_types! {
+	pub const EthGovernanceMaxProposals: u32 = 100;
+	pub const EthGovernanceMaxVotes: u32 = 50;
+}
+
+impl pallet_dao_eth_governance::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type Balance = Balance;
+	type Proposal = RuntimeCall;
+	type MaxProposals = EthGovernanceMaxProposals;
+	type MaxVotes = EthGovernanceMaxVotes;
+	type DaoProvider = Dao;
+	type Preimages = Preimage;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
@@ -1709,6 +1724,7 @@ construct_runtime!(
 		DaoCouncilMembers: pallet_dao_membership::<Instance1>,
 		DaoTechnicalCommitteeMembers: pallet_dao_membership::<Instance2>,
 		DaoDemocracy: pallet_dao_democracy,
+		DaoEthGovernance: pallet_dao_eth_governance,
 		Preimage: pallet_preimage,
 		Utility: pallet_utility,
 	}
