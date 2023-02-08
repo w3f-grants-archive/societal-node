@@ -52,8 +52,8 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>},
 		Bounties1: pallet_bounties::<Instance1>::{Pallet, Call, Storage, Event<T>},
-		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>},
-		Treasury1: pallet_treasury::<Instance1>::{Pallet, Call, Storage, Config, Event<T>},
+		Treasury: pallet_dao_treasury::{Pallet, Call, Storage, Config, Event<T>},
+		Treasury1: pallet_dao_treasury::<Instance1>::{Pallet, Call, Storage, Config, Event<T>},
 	}
 );
 
@@ -108,11 +108,10 @@ parameter_types! {
 	pub const TreasuryPalletId2: PalletId = PalletId(*b"py/trsr2");
 }
 
-impl pallet_treasury::Config for Test {
+impl pallet_dao_treasury::Config for Test {
 	type PalletId = TreasuryPalletId;
 	type Currency = pallet_balances::Pallet<Test>;
 	type ApproveOrigin = frame_system::EnsureRoot<u128>;
-	type RejectOrigin = frame_system::EnsureRoot<u128>;
 	type RuntimeEvent = RuntimeEvent;
 	type OnSlash = ();
 	type ProposalBond = ProposalBond;
@@ -127,7 +126,7 @@ impl pallet_treasury::Config for Test {
 	type SpendOrigin = frame_support::traits::NeverEnsureOrigin<u64>;
 }
 
-impl pallet_treasury::Config<Instance1> for Test {
+impl pallet_dao_treasury::Config<Instance1> for Test {
 	type PalletId = TreasuryPalletId2;
 	type Currency = pallet_balances::Pallet<Test>;
 	type ApproveOrigin = frame_system::EnsureRoot<u128>;
@@ -184,7 +183,7 @@ impl Config<Instance1> for Test {
 	type ChildBountyManager = ();
 }
 
-type TreasuryError = pallet_treasury::Error<Test>;
+type TreasuryError = pallet_dao_treasury::Error<Test>;
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext: sp_io::TestExternalities = GenesisConfig {
@@ -314,7 +313,7 @@ fn reject_non_existent_spend_proposal_fails() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
 			Treasury::reject_proposal(RuntimeOrigin::root(), 0),
-			pallet_treasury::Error::<Test>::InvalidIndex
+			pallet_dao_treasury::Error::<Test>::InvalidIndex
 		);
 	});
 }
@@ -517,7 +516,7 @@ fn close_bounty_works() {
 		assert_eq!(Balances::free_balance(0), 100 - deposit);
 
 		assert_eq!(Bounties::bounties(0), None);
-		assert!(!pallet_treasury::Proposals::<Test>::contains_key(0));
+		assert!(!pallet_dao_treasury::Proposals::<Test>::contains_key(0));
 
 		assert_eq!(Bounties::bounty_descriptions(0), None);
 	});
@@ -1074,7 +1073,7 @@ fn genesis_funding_works() {
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
-	GenesisBuild::<Test>::assimilate_storage(&pallet_treasury::GenesisConfig, &mut t).unwrap();
+	GenesisBuild::<Test>::assimilate_storage(&pallet_dao_treasury::GenesisConfig, &mut t).unwrap();
 	let mut t: sp_io::TestExternalities = t.into();
 
 	t.execute_with(|| {

@@ -15,11 +15,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! # Bounties Module ( pallet-bounties )
+//! # DAO Bounties Module ( pallet-dao-bounties )
 //!
 //! ## Bounty
 //!
-//! > NOTE: This pallet is tightly coupled with pallet-treasury.
+//! > NOTE: This pallet is tightly coupled with pallet-dao-treasury.
 //!
 //! A Bounty Spending is a reward for a specified body of work - or specified set of objectives -
 //! that needs to be executed for a predefined Treasury amount to be paid out. A curator is assigned
@@ -83,14 +83,18 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod benchmarking;
-pub mod migrations;
 mod tests;
 pub mod weights;
 
 use sp_std::prelude::*;
 
+use pallet_dao_assets::LockableAsset;
+
 use frame_support::traits::{
-	Currency, ExistenceRequirement::AllowDeath, Get, Imbalance, OnUnbalanced, ReservableCurrency,
+	fungibles::{BalancedHold, Inspect, InspectHold, MutateHold},
+	Currency,
+	ExistenceRequirement::AllowDeath,
+	Get, Imbalance, OnUnbalanced, ReservableCurrency,
 };
 
 use sp_runtime::{
@@ -106,10 +110,11 @@ use scale_info::TypeInfo;
 pub use weights::WeightInfo;
 
 pub use pallet::*;
+use pallet_dao_treasury::DaoId;
 
-type BalanceOf<T, I = ()> = pallet_treasury::BalanceOf<T, I>;
+type BalanceOf<T, I = ()> = pallet_dao_treasury::BalanceOf<T, I>;
 
-type PositiveImbalanceOf<T, I = ()> = pallet_treasury::PositiveImbalanceOf<T, I>;
+type PositiveImbalanceOf<T, I = ()> = pallet_dao_treasury::PositiveImbalanceOf<T, I>;
 
 /// An index of a bounty. Just a `u32`.
 pub type BountyIndex = u32;
@@ -193,7 +198,19 @@ pub mod pallet {
 	pub struct Pallet<T, I = ()>(_);
 
 	#[pallet::config]
-	pub trait Config<I: 'static = ()>: frame_system::Config + pallet_treasury::Config<I> {
+	pub trait Config<I: 'static = ()>:
+		frame_system::Config + pallet_dao_treasury::Config<I>
+	{
+		type Assets: LockableAsset<
+				Self::AccountId,
+				AssetId = u32,
+				Moment = Self::BlockNumber,
+				Balance = BalanceOf<Self, I>,
+			> + Inspect<Self::AccountId>
+			+ InspectHold<Self::AccountId>
+			+ MutateHold<Self::AccountId>
+			+ BalancedHold<Self::AccountId>;
+
 		/// The amount held on deposit for placing a bounty proposal.
 		#[pallet::constant]
 		type BountyDepositBase: Get<BalanceOf<Self, I>>;
@@ -357,7 +374,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] bounty_id: BountyIndex,
 		) -> DispatchResult {
-			T::ApproveOrigin::ensure_origin(origin)?;
+			// T::ApproveOrigin::ensure_origin(origin)?;
 
 			Bounties::<T, I>::try_mutate_exists(bounty_id, |maybe_bounty| -> DispatchResult {
 				let mut bounty = maybe_bounty.as_mut().ok_or(Error::<T, I>::InvalidIndex)?;
@@ -387,7 +404,7 @@ pub mod pallet {
 			curator: AccountIdLookupOf<T>,
 			#[pallet::compact] fee: BalanceOf<T, I>,
 		) -> DispatchResult {
-			T::ApproveOrigin::ensure_origin(origin)?;
+			// T::ApproveOrigin::ensure_origin(origin)?;
 
 			let curator = T::Lookup::lookup(curator)?;
 			Bounties::<T, I>::try_mutate_exists(bounty_id, |maybe_bounty| -> DispatchResult {
@@ -430,9 +447,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] bounty_id: BountyIndex,
 		) -> DispatchResult {
-			let maybe_sender = ensure_signed(origin.clone())
-				.map(Some)
-				.or_else(|_| T::RejectOrigin::ensure_origin(origin).map(|_| None))?;
+			let maybe_sender = ensure_signed(origin.clone()).map(Some)?;
+			// .or_else(|_| T::RejectOrigin::ensure_origin(origin).map(|_| None))?;
 
 			Bounties::<T, I>::try_mutate_exists(bounty_id, |maybe_bounty| -> DispatchResult {
 				let mut bounty = maybe_bounty.as_mut().ok_or(Error::<T, I>::InvalidIndex)?;
@@ -668,7 +684,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] bounty_id: BountyIndex,
 		) -> DispatchResultWithPostInfo {
-			T::RejectOrigin::ensure_origin(origin)?;
+			// T::RejectOrigin::ensure_origin(origin)?;
 
 			Bounties::<T, I>::try_mutate_exists(
 				bounty_id,
@@ -850,8 +866,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	}
 }
 
-impl<T: Config<I>, I: 'static> pallet_treasury::SpendFunds<T, I> for Pallet<T, I> {
+impl<T: Config<I>, I: 'static> pallet_dao_treasury::SpendFunds<T, I> for Pallet<T, I> {
 	fn spend_funds(
+		dao_id: DaoId,
 		budget_remaining: &mut BalanceOf<T, I>,
 		imbalance: &mut PositiveImbalanceOf<T, I>,
 		total_weight: &mut Weight,

@@ -26,7 +26,7 @@ use frame_system::RawOrigin;
 use sp_runtime::traits::Bounded;
 
 use crate::Pallet as Bounties;
-use pallet_treasury::Pallet as Treasury;
+use pallet_dao_treasury::Pallet as Treasury;
 
 const SEED: u32 = 0;
 
@@ -206,7 +206,7 @@ benchmarks_instance_pallet! {
 		let mut total_weight = Weight::zero();
 		let mut missed_any = false;
 	}: {
-		<Bounties<T, I> as pallet_treasury::SpendFunds<T, I>>::spend_funds(
+		<Bounties<T, I> as pallet_dao_treasury::SpendFunds<T, I>>::spend_funds(
 			&mut budget_remaining,
 			&mut imbalance,
 			&mut total_weight,
